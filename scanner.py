@@ -1,30 +1,24 @@
 import os
 import json
 import gspread
-import google.generativeai as genai
+from google import genai
 from datetime import datetime
 
 # =========================
-# CONFIGURAÇÃO GEMINI
+# CONFIG GEMINI (NOVA API)
 # =========================
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-1.0-pro")
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # =========================
-# CONFIGURAÇÃO GOOGLE SHEETS
+# GOOGLE SHEETS
 # =========================
 google_creds = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
 gc = gspread.service_account_from_dict(google_creds)
 
-# Nome EXATO da planilha
 PLANILHA_NOME = "Radar_Agritech_Prospects"
-
 sheet = gc.open(PLANILHA_NOME).sheet1
 
 
-# =========================
-# FUNÇÃO BUSCAR EMPRESAS
-# =========================
 def buscar_empresas():
     prompt = """
     Liste 2 empresas brasileiras do setor agritech
@@ -33,21 +27,23 @@ def buscar_empresas():
 
     Retorne SOMENTE JSON válido.
     Não use markdown.
-    Não escreva explicações.
     """
 
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model="gemini-1.5-flash",
+        contents=prompt
+    )
+
     texto = response.text.strip()
 
-    print("=== RESPOSTA BRUTA DO GEMINI ===")
+    print("=== RESPOSTA GEMINI ===")
     print(texto)
-    print("=== FIM RESPOSTA ===")
+    print("=======================")
 
-    # Remove blocos markdown se existirem
+    # Limpeza básica
     if "```" in texto:
         texto = texto.replace("```json", "").replace("```", "").strip()
 
-    # Extrair somente parte JSON (entre [ e ])
     inicio = texto.find("[")
     fim = texto.rfind("]")
 
@@ -55,19 +51,14 @@ def buscar_empresas():
         texto = texto[inicio:fim+1]
 
     try:
-        empresas = json.loads(texto)
-        return empresas
-    except Exception as e:
-        print("Erro ao converter JSON:", e)
+        return json.loads(texto)
+    except:
         return []
 
 
-# =========================
-# FUNÇÃO ATUALIZAR PLANILHA
-# =========================
 def atualizar_planilha(empresas):
     if not empresas:
-        print("Nenhuma empresa válida encontrada.")
+        print("Nenhuma empresa encontrada.")
         return
 
     for empresa in empresas:
@@ -88,14 +79,11 @@ def atualizar_planilha(empresas):
 
         sheet.append_row(row)
 
-    print(f"{len(empresas)} empresas adicionadas com sucesso.")
+    print(f"{len(empresas)} empresas adicionadas.")
 
 
-# =========================
-# EXECUÇÃO PRINCIPAL
-# =========================
 if __name__ == "__main__":
     print("Iniciando scanner...")
     empresas = buscar_empresas()
     atualizar_planilha(empresas)
-    print("Scanner finalizado.")
+    print("Finalizado.")
