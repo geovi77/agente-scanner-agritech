@@ -1,11 +1,7 @@
 import os
 import json
-from openai import OpenAI
 import gspread
 from datetime import datetime
-
-# Cliente OpenAI
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Credenciais Google vindas do Secret
 google_creds = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
@@ -13,38 +9,34 @@ google_creds = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
 gc = gspread.service_account_from_dict(google_creds)
 sheet = gc.open("Radar_Agritech_Prospects").sheet1
 
-def buscar_empresas():
-    prompt = """
-    Liste 3 empresas brasileiras do setor agritech
-    focadas em robótica, sensores ou IA aplicada,
-    que apresentaram crescimento ou investimento recente.
-
-    Retorne apenas JSON válido neste formato:
-    [
-      {
-        "empresa": "",
-        "site": "",
-        "cidade": "",
-        "funcionarios": "",
-        "receita": "",
-        "cto": "",
-        "produto": "",
-        "crescimento": "",
-        "complexidade": ""
-      }
+def buscar_empresas_mock():
+    # Dados simulados (MOCK)
+    return [
+        {
+            "empresa": "AgroTech Robotics",
+            "site": "https://agrotechrobotics.com.br",
+            "cidade": "Ribeirão Preto - SP",
+            "funcionarios": "45",
+            "receita": "R$ 12M",
+            "cto": "João Silva",
+            "produto": "Robô autônomo para pulverização inteligente",
+            "crescimento": "Captação Série A em 2025",
+            "complexidade": "Alta"
+        },
+        {
+            "empresa": "SmartFarm AI",
+            "site": "https://smartfarmai.com.br",
+            "cidade": "Londrina - PR",
+            "funcionarios": "32",
+            "receita": "R$ 8M",
+            "cto": "Maria Souza",
+            "produto": "Plataforma de IA para monitoramento agrícola",
+            "crescimento": "Expansão nacional 2025",
+            "complexidade": "Alta"
+        }
     ]
-    """
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    return response.choices[0].message.content
-
-def atualizar_planilha(dados_json):
-    empresas = json.loads(dados_json)
-
+def atualizar_planilha(empresas):
     for empresa in empresas:
         row = [
             datetime.today().strftime('%Y-%m-%d'),
@@ -57,12 +49,12 @@ def atualizar_planilha(dados_json):
             empresa["produto"],
             empresa["crescimento"],
             empresa["complexidade"],
-            "",
-            "IA Scan"
+            "10",
+            "Mock Test"
         ]
 
         sheet.append_row(row)
 
 if __name__ == "__main__":
-    dados = buscar_empresas()
+    dados = buscar_empresas_mock()
     atualizar_planilha(dados)
