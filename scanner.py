@@ -1,42 +1,46 @@
 import os
 import json
 import gspread
+import google.generativeai as genai
 from datetime import datetime
 
-# Credenciais Google vindas do Secret
-google_creds = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
+# Configurar Gemini
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-flash")
 
+# Google Sheets
+google_creds = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
 gc = gspread.service_account_from_dict(google_creds)
 sheet = gc.open("Radar_Agritech_Prospects").sheet1
 
-def buscar_empresas_mock():
-    # Dados simulados (MOCK)
-    return [
-        {
-            "empresa": "AgroTech Robotics",
-            "site": "https://agrotechrobotics.com.br",
-            "cidade": "Ribeirão Preto - SP",
-            "funcionarios": "45",
-            "receita": "R$ 12M",
-            "cto": "João Silva",
-            "produto": "Robô autônomo para pulverização inteligente",
-            "crescimento": "Captação Série A em 2025",
-            "complexidade": "Alta"
-        },
-        {
-            "empresa": "SmartFarm AI",
-            "site": "https://smartfarmai.com.br",
-            "cidade": "Londrina - PR",
-            "funcionarios": "32",
-            "receita": "R$ 8M",
-            "cto": "Maria Souza",
-            "produto": "Plataforma de IA para monitoramento agrícola",
-            "crescimento": "Expansão nacional 2025",
-            "complexidade": "Alta"
-        }
-    ]
+def buscar_empresas():
+    prompt = """
+    Liste 2 empresas brasileiras do setor agritech
+    focadas em robótica ou IA aplicada
+    que tiveram crescimento recente.
 
-def atualizar_planilha(empresas):
+    Retorne apenas JSON válido neste formato:
+    [
+      {
+        "empresa": "",
+        "site": "",
+        "cidade": "",
+        "funcionarios": "",
+        "receita": "",
+        "cto": "",
+        "produto": "",
+        "crescimento": "",
+        "complexidade": ""
+      }
+    ]
+    """
+
+    response = model.generate_content(prompt)
+    return response.text
+
+def atualizar_planilha(dados_json):
+    empresas = json.loads(dados_json)
+
     for empresa in empresas:
         row = [
             datetime.today().strftime('%Y-%m-%d'),
@@ -49,12 +53,12 @@ def atualizar_planilha(empresas):
             empresa["produto"],
             empresa["crescimento"],
             empresa["complexidade"],
-            "10",
-            "Mock Test"
+            "",
+            "Gemini Scan"
         ]
 
         sheet.append_row(row)
 
 if __name__ == "__main__":
-    dados = buscar_empresas_mock()
+    dados = buscar_empresas()
     atualizar_planilha(dados)
